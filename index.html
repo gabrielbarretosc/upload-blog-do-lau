@@ -19,6 +19,7 @@
     --accent-ink: #ffffff;
     --ok: #12805c;
     --err: #b3261e;
+    --warn-bg: #fff4d6;
     --check-a: #e4e8ee;
     --check-b: #f3f5f8;
   }
@@ -33,6 +34,7 @@
       --accent-ink: #0f1522;
       --ok: #4fd1a1;
       --err: #ff8a80;
+      --warn-bg: #3a3320;
       --check-a: #1f2940;
       --check-b: #233049;
     }
@@ -50,9 +52,29 @@
 
   .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 20px 64px; }
 
-  header { margin-bottom: 28px; }
+  header { margin-bottom: 24px; }
   h1 { margin: 0 0 6px; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
   header p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+  /* Painel de acesso (token) */
+  details.access {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    margin-bottom: 20px;
+  }
+  details.access summary {
+    cursor: pointer; list-style: none;
+    padding: 14px 18px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  details.access summary::-webkit-details-marker { display: none; }
+  details.access summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 14px; }
+  .access-state { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+  .access-state.ok { color: var(--ok); }
+  .access-state.err { color: var(--err); }
+  .access-body { padding: 0 18px 18px; display: grid; gap: 10px; }
+  .access-body p { margin: 0; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
 
   .grid {
     display: grid;
@@ -72,7 +94,7 @@
     padding: 16px 18px 12px;
   }
   .card-head h2 { margin: 0; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.02em; }
-  .status { font-size: 0.82rem; color: var(--muted); }
+  .status { font-size: 0.82rem; color: var(--muted); text-align: right; }
   .status.ok { color: var(--ok); }
   .status.err { color: var(--err); }
 
@@ -85,15 +107,13 @@
     border-block: 1px solid var(--line);
   }
   .preview img { display: block; max-width: 100%; height: auto; }
-  .preview .msg {
-    padding: 28px 20px; text-align: center; color: var(--err); font-size: 0.92rem;
-  }
+  .preview .msg { padding: 28px 20px; text-align: center; color: var(--err); font-size: 0.92rem; }
   .preview .msg code { background: var(--surface); padding: 2px 6px; border-radius: 6px; color: var(--ink); }
 
   .card-body { padding: 14px 18px 18px; display: grid; gap: 10px; }
   .field-label { font-size: 0.82rem; color: var(--muted); }
   .link-row { display: flex; gap: 8px; }
-  .link-row input {
+  input[type="text"], input[type="password"] {
     flex: 1; min-width: 0;
     font: inherit; font-size: 0.86rem;
     padding: 10px 12px;
@@ -106,16 +126,28 @@
     border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
     text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap;
   }
-  .btn.ghost { background: transparent; color: var(--accent); }
+  button.ghost, .btn.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
   button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  footer { margin-top: 28px; color: var(--muted); font-size: 0.85rem; max-width: 70ch; }
+  .pending {
+    background: var(--warn-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: grid; gap: 10px;
+    font-size: 0.9rem;
+  }
+  .pending[hidden] { display: none; }
+  .pending .pname { word-break: break-all; }
+
+  footer { margin-top: 28px; color: var(--muted); font-size: 0.85rem; max-width: 74ch; }
   footer code { background: var(--surface); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; color: var(--ink); }
 
   @media (prefers-reduced-motion: no-preference) {
     button, .btn { transition: filter .15s; }
-    button:hover, .btn:hover { filter: brightness(1.08); }
+    button:hover:not(:disabled), .btn:hover { filter: brightness(1.08); }
   }
 </style>
 </head>
@@ -123,13 +155,29 @@
 <div class="wrap">
   <header>
     <h1>Banners</h1>
-    <p>Cada banner tem um link fixo. Ao trocar a imagem no repositório, mantendo o mesmo nome de arquivo, o link continua o mesmo.</p>
+    <p>Cada banner tem um link fixo. Ao enviar uma nova imagem, o link continua o mesmo.</p>
   </header>
+
+  <details class="access" id="access">
+    <summary>
+      <span>Acesso para enviar imagens</span>
+      <span class="access-state" id="accessState">Sem acesso configurado</span>
+    </summary>
+    <div class="access-body">
+      <p>Cole aqui o token de acesso que você recebeu. Ele fica salvo só neste navegador, então você informa uma vez.</p>
+      <div class="link-row">
+        <input type="password" id="tokenInput" placeholder="Token de acesso" autocomplete="off" spellcheck="false">
+        <button type="button" id="tokenSave">Salvar e testar</button>
+        <button type="button" class="ghost" id="tokenClear">Remover</button>
+      </div>
+      <p id="accessMsg" aria-live="polite"></p>
+    </div>
+  </details>
 
   <main class="grid" id="grid"></main>
 
   <footer>
-    Para trocar um banner: envie o novo arquivo para a pasta <code>img/</code> do repositório com exatamente o mesmo nome, terminando em <code>.jpg</code>. Se a imagem for GIF, PNG ou WebP, renomeie o arquivo para <code>.jpg</code> antes de enviar (com as extensões de arquivo visíveis no computador). O site pode levar alguns minutos para mostrar a versão nova.
+    Para trocar um banner: clique em <strong>Trocar imagem</strong>, escolha o arquivo (JPG, PNG, GIF ou WebP) e clique em <strong>Enviar</strong>. O arquivo é salvo sempre no nome fixo do banner (<code>.jpg</code>), sem precisar renomear, e GIFs continuam animados. O site pode levar alguns minutos para mostrar a versão nova.
   </footer>
 </div>
 
@@ -141,57 +189,240 @@
     { label: "BANNER 2", file: "img/banner-meio.jpg" },
     { label: "BANNER 3", file: "img/banner-inferior.jpg" }
   ];
+  // Opcional: só preencher se a detecção automática do repositório falhar.
+  const CONFIG = { owner: "", repo: "" };
+  const MAX_MB = 20;
   // ==========================
 
-  const grid = document.getElementById("grid");
+  const API = "https://api.github.com";
+  const TOKEN_KEY = "bannerhost.token";
+
+  function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } }
+  function setToken(v) { try { if (v) localStorage.setItem(TOKEN_KEY, v); else localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
 
   function absoluteUrl(path) {
     return new URL(path, location.href.split("#")[0].split("?")[0]).href;
   }
 
+  function repoInfo() {
+    if (CONFIG.owner && CONFIG.repo) return { owner: CONFIG.owner, repo: CONFIG.repo };
+    const host = location.hostname;
+    if (!host.endsWith(".github.io")) return null;
+    const owner = host.split(".")[0];
+    const seg = location.pathname.split("/").filter(Boolean)[0];
+    const repo = (seg && !/\.html?$/i.test(seg)) ? seg : owner + ".github.io";
+    return { owner: owner, repo: repo };
+  }
+
+  function gh(path, opts) {
+    opts = opts || {};
+    const headers = Object.assign({
+      "Accept": "application/vnd.github+json",
+      "Authorization": "Bearer " + getToken(),
+      "X-GitHub-Api-Version": "2022-11-28"
+    }, opts.headers || {});
+    return fetch(API + path, Object.assign({}, opts, { headers: headers }));
+  }
+
+  function toBase64(file) {
+    return new Promise(function (resolve, reject) {
+      const r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(",")[1]); };
+      r.onerror = function () { reject(new Error("Não foi possível ler o arquivo.")); };
+      r.readAsDataURL(file);
+    });
+  }
+
+  function humanSize(bytes) {
+    return bytes > 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
+  }
+
+  // ---------- Painel de acesso ----------
+  const access = document.getElementById("access");
+  const accessState = document.getElementById("accessState");
+  const accessMsg = document.getElementById("accessMsg");
+  const tokenInput = document.getElementById("tokenInput");
+
+  function setAccess(text, cls) {
+    accessState.textContent = text;
+    accessState.className = "access-state" + (cls ? " " + cls : "");
+  }
+
+  async function verifyAccess() {
+    const info = repoInfo();
+    if (!getToken()) { setAccess("Sem acesso configurado", ""); return false; }
+    if (!info) {
+      setAccess("Repositório não identificado", "err");
+      accessMsg.textContent = "Abra esta página pelo endereço do GitHub Pages (usuario.github.io) ou preencha owner e repo em CONFIG.";
+      return false;
+    }
+    setAccess("Testando…", "");
+    try {
+      const res = await gh("/repos/" + info.owner + "/" + info.repo);
+      if (res.status === 401) throw new Error("Token inválido ou expirado.");
+      if (!res.ok) throw new Error("Token sem acesso a este repositório.");
+      const data = await res.json();
+      if (!data.permissions || !data.permissions.push) throw new Error("Token sem permissão de escrita (Contents: Read and write).");
+      setAccess("Conectado a " + info.owner + "/" + info.repo, "ok");
+      accessMsg.textContent = "";
+      return true;
+    } catch (e) {
+      setAccess("Acesso com problema", "err");
+      accessMsg.textContent = e.message;
+      return false;
+    }
+  }
+
+  document.getElementById("tokenSave").addEventListener("click", async function () {
+    const v = tokenInput.value.trim();
+    if (!v) { accessMsg.textContent = "Cole o token no campo."; return; }
+    setToken(v);
+    tokenInput.value = "";
+    await verifyAccess();
+  });
+  document.getElementById("tokenClear").addEventListener("click", function () {
+    setToken("");
+    tokenInput.value = "";
+    accessMsg.textContent = "Token removido deste navegador.";
+    setAccess("Sem acesso configurado", "");
+  });
+
+  // ---------- Envio ----------
+  async function uploadFile(info, path, file, label) {
+    const base = "/repos/" + info.owner + "/" + info.repo + "/contents/" + path;
+    const content = await toBase64(file);
+
+    // descobre o sha atual (necessário para substituir o arquivo)
+    let sha;
+    const cur = await gh(base, { headers: { "Accept": "application/vnd.github.object+json" } });
+    if (cur.status === 200) { sha = (await cur.json()).sha; }
+    else if (cur.status !== 404) { throw httpError(cur.status); }
+
+    const body = { message: "Atualiza " + label + " pelo painel", content: content };
+    if (sha) body.sha = sha;
+    const put = await gh(base, { method: "PUT", body: JSON.stringify(body) });
+    if (!put.ok) throw httpError(put.status);
+  }
+
+  function httpError(status) {
+    if (status === 401) return new Error("Token inválido ou expirado.");
+    if (status === 403 || status === 404) return new Error("Sem permissão para gravar neste repositório.");
+    if (status === 409 || status === 422) return new Error("Conflito ao gravar. Tente enviar de novo.");
+    return new Error("Falha no envio (erro " + status + ").");
+  }
+
+  // ---------- Cards ----------
+  const grid = document.getElementById("grid");
+
   BANNERS.forEach(function (b) {
     const url = absoluteUrl(b.file);
+    let pendingFile = null;
 
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML =
-      '<div class="card-head"><h2></h2><span class="status">Carregando…</span></div>' +
+      '<div class="card-head"><h2></h2><span class="status" aria-live="polite">Carregando…</span></div>' +
       '<div class="preview"></div>' +
       '<div class="card-body">' +
         '<label class="field-label">Link permanente</label>' +
-        '<div class="link-row"><input type="text" readonly><button type="button">Copiar link</button></div>' +
-        '<div class="actions"><a class="btn ghost" target="_blank" rel="noopener">Abrir imagem</a></div>' +
+        '<div class="link-row"><input type="text" readonly><button type="button" class="copy">Copiar link</button></div>' +
+        '<div class="actions">' +
+          '<button type="button" class="pick">Trocar imagem</button>' +
+          '<a class="btn ghost open" target="_blank" rel="noopener">Abrir imagem</a>' +
+          '<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden>' +
+        '</div>' +
+        '<div class="pending" hidden>' +
+          '<span class="pname"></span>' +
+          '<div class="actions"><button type="button" class="send">Enviar</button><button type="button" class="ghost cancel">Cancelar</button></div>' +
+        '</div>' +
       '</div>';
 
     card.querySelector("h2").textContent = b.label;
     const status = card.querySelector(".status");
     const preview = card.querySelector(".preview");
-    const input = card.querySelector("input");
-    const copyBtn = card.querySelector("button");
-    const openBtn = card.querySelector("a.btn");
+    const input = card.querySelector('input[type="text"]');
+    const copyBtn = card.querySelector(".copy");
+    const openBtn = card.querySelector(".open");
+    const pickBtn = card.querySelector(".pick");
+    const fileInput = card.querySelector('input[type="file"]');
+    const pending = card.querySelector(".pending");
+    const pname = card.querySelector(".pname");
+    const sendBtn = card.querySelector(".send");
+    const cancelBtn = card.querySelector(".cancel");
 
     input.value = url;
     openBtn.href = url;
 
-    // Preview com cache-bust (só na visualização; o link copiado fica limpo)
-    const img = new Image();
-    img.alt = b.label;
-    img.onload = function () {
-      status.textContent = img.naturalWidth + " × " + img.naturalHeight + " px";
-      status.className = "status ok";
-    };
-    img.onerror = function () {
-      preview.innerHTML = "";
-      const m = document.createElement("div");
-      m.className = "msg";
-      m.innerHTML = "Imagem não encontrada. Envie o arquivo <code></code> para o repositório.";
-      m.querySelector("code").textContent = b.file;
-      preview.appendChild(m);
-      status.textContent = "Sem imagem";
-      status.className = "status err";
-    };
-    img.src = url + "?v=" + Date.now();
-    preview.appendChild(img);
+    function setStatus(text, cls) { status.textContent = text; status.className = "status" + (cls ? " " + cls : ""); }
+
+    function loadRemote() {
+      const img = new Image();
+      img.alt = b.label;
+      img.onload = function () { setStatus(img.naturalWidth + " × " + img.naturalHeight + " px", "ok"); };
+      img.onerror = function () {
+        const m = document.createElement("div");
+        m.className = "msg";
+        m.innerHTML = "Imagem não encontrada. Envie o arquivo <code></code>.";
+        m.querySelector("code").textContent = b.file;
+        preview.replaceChildren(m);
+        setStatus("Sem imagem", "err");
+      };
+      img.src = url + "?v=" + Date.now(); // cache-bust só na prévia; o link copiado fica limpo
+      preview.replaceChildren(img);
+    }
+    loadRemote();
+
+    function busy(on) { sendBtn.disabled = on; cancelBtn.disabled = on; pickBtn.disabled = on; }
+
+    pickBtn.addEventListener("click", function () {
+      if (!getToken()) {
+        access.open = true;
+        accessMsg.textContent = "Informe o token de acesso para poder enviar imagens.";
+        access.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", function () {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      if (!/^image\/(jpeg|png|gif|webp)$/.test(f.type)) {
+        setStatus("Use JPG, PNG, GIF ou WebP.", "err"); fileInput.value = ""; return;
+      }
+      if (f.size > MAX_MB * 1048576) {
+        setStatus("Arquivo acima de " + MAX_MB + " MB.", "err"); fileInput.value = ""; return;
+      }
+      pendingFile = f;
+      pname.textContent = f.name + " (" + humanSize(f.size) + ")";
+      pending.hidden = false;
+      const img = new Image();
+      img.alt = b.label;
+      img.onload = function () { setStatus("Prévia, ainda não enviada · " + img.naturalWidth + " × " + img.naturalHeight + " px", ""); };
+      img.src = URL.createObjectURL(f);
+      preview.replaceChildren(img);
+    });
+
+    cancelBtn.addEventListener("click", function () {
+      pendingFile = null; fileInput.value = ""; pending.hidden = true;
+      loadRemote();
+    });
+
+    sendBtn.addEventListener("click", async function () {
+      const info = repoInfo();
+      if (!pendingFile) return;
+      if (!info) { setStatus("Repositório não identificado.", "err"); return; }
+      busy(true); setStatus("Enviando…", "");
+      try {
+        await uploadFile(info, b.file, pendingFile, b.label);
+        setStatus("Enviado. O site atualiza em alguns minutos.", "ok");
+        pendingFile = null; fileInput.value = ""; pending.hidden = true;
+      } catch (e) {
+        setStatus(e.message, "err");
+      } finally {
+        busy(false);
+      }
+    });
 
     copyBtn.addEventListener("click", function () {
       const done = function () {
@@ -207,6 +438,9 @@
 
     grid.appendChild(card);
   });
+
+  // abre o painel de acesso automaticamente quando ainda não há token
+  if (!getToken()) { access.open = true; } else { verifyAccess(); }
 </script>
 </body>
 </html>
